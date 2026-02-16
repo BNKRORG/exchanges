@@ -30,6 +30,7 @@ jobs:
       matrix:
         args:
           - -p kraken-api
+          - -p strike-api
     steps:
       - name: Checkout
         uses: actions/checkout@v4
