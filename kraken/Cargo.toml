@@ -7,7 +7,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-base64 = "0.22"
+base64.workspace = true
 hmac.workspace = true
 reqwest = { workspace = true, features = ["http2", "json", "rustls-tls"] }
 serde = { workspace = true, features = ["derive"] }
