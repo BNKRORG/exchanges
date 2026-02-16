@@ -1,5 +1,7 @@
 [workspace]
-members = []
+members = [
+    "kraken",
+]
 resolver = "2"
 
 [workspace.package]
