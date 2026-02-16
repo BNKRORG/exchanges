@@ -1,0 +1,11 @@
+[workspace]
+members = []
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+authors = ["Yuki Kishimoto <yukikishimoto@protonmail.com>"]
+rust-version = "1.85.0"
+publish = false
+
+[workspace.dependencies]
