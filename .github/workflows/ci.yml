@@ -29,6 +29,7 @@ jobs:
     strategy:
       matrix:
         args:
+          - -p binance-api
           - -p kraken-api
           - -p strike-api
     steps:
