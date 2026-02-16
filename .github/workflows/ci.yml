@@ -30,6 +30,7 @@ jobs:
       matrix:
         args:
           - -p binance-api
+          - -p bitfinex-api
           - -p kraken-api
           - -p strike-api
     steps:
