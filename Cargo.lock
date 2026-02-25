@@ -45,6 +45,7 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 name = "binance-api"
 version = "0.3.1"
 dependencies = [
+ "common",
  "hex",
  "hmac",
  "reqwest",
@@ -140,6 +141,7 @@ version = "0.1.2"
 dependencies = [
  "base64",
  "chrono",
+ "common",
  "p256",
  "reqwest",
  "ring",
@@ -148,6 +150,13 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
+]
+
+[[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -709,6 +718,7 @@ name = "kraken-api"
 version = "0.2.0"
 dependencies = [
  "base64",
+ "common",
  "hmac",
  "reqwest",
  "serde",
@@ -1233,6 +1243,7 @@ name = "strike-api"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "common",
  "reqwest",
  "serde",
  "serde_json",

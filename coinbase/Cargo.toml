@@ -9,6 +9,7 @@ publish.workspace = true
 [dependencies]
 base64.workspace = true
 chrono = { workspace = true, features = ["serde"] }
+common.workspace = true
 p256 = { version = "0.13", features = ["pem", "pkcs8"] }
 reqwest = { workspace = true, features = ["http2", "json", "rustls-tls"] }
 ring = "0.17"

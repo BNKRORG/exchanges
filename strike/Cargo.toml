@@ -8,6 +8,7 @@ publish.workspace = true
 
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
+common.workspace = true
 reqwest = { workspace = true, features = ["http2", "json", "rustls-tls"] }
 serde = { workspace = true, features = ["derive"] }
 thiserror.workspace = true

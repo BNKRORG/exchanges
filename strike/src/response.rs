@@ -1,7 +1,8 @@
 //! Strike responses
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Deserializer, de};
+use common::deser::deserialize_string_to_f64;
+use serde::Deserialize;
 
 /// Strike balance
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -127,14 +128,6 @@ pub struct Invoice {
     pub state: InvoiceState,
     /// Timestamp when the invoice was created
     pub created: DateTime<Utc>,
-}
-
-fn deserialize_string_to_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = String::deserialize(deserializer)?;
-    s.parse().map_err(de::Error::custom)
 }
 
 #[cfg(test)]

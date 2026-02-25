@@ -3,6 +3,7 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
+use common::deser::deserialize_string_to_f64;
 use serde::Deserialize;
 
 /// Exchange information
@@ -151,14 +152,6 @@ pub struct Trade {
     pub is_maker: bool,
     /// Whether is best match
     pub is_best_match: bool,
-}
-
-fn deserialize_string_to_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: String = String::deserialize(deserializer)?;
-    s.parse().map_err(serde::de::Error::custom)
 }
 
 #[cfg(test)]

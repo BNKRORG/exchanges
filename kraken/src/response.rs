@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use common::deser::deserialize_string_to_f64;
 use serde::{Deserialize, Deserializer, de};
 
 use crate::constant::TICKERS;
@@ -203,14 +204,6 @@ pub struct Trade {
     /// Volume (base currency)
     #[serde(deserialize_with = "deserialize_string_to_f64")]
     pub vol: f64,
-}
-
-fn deserialize_string_to_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = String::deserialize(deserializer)?;
-    s.parse().map_err(de::Error::custom)
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@
 use std::fmt;
 
 use chrono::{DateTime, Utc};
+use common::deser::deserialize_string_to_f64;
 use serde::{Deserialize, Serialize};
 
 /// Coinbase App error message
@@ -235,14 +236,6 @@ pub struct Transaction {
     pub description: Option<String>,
     /// Created at
     pub created_at: DateTime<Utc>,
-}
-
-fn deserialize_string_to_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: String = String::deserialize(deserializer)?;
-    s.parse().map_err(serde::de::Error::custom)
 }
 
 #[cfg(test)]
