@@ -26,14 +26,6 @@ jobs:
   check:
     name: Check libraries
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        args:
-          - -p binance-api
-          - -p bitfinex-api
-          - -p coinbase-api
-          - -p kraken-api
-          - -p strike-api
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,10 +34,10 @@ jobs:
         uses: Swatinem/rust-cache@v2.7.8
 
       - name: Check
-        run: cargo check ${{ matrix.args }}
+        run: cargo check --all
 
       - name: Clippy
-        run: cargo clippy ${{ matrix.args }} -- -D warnings
+        run: cargo clippy --all -- -D warnings
 
       - name: Test
-        run: cargo test ${{ matrix.args }}
+        run: cargo test --all
