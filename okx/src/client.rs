@@ -12,11 +12,16 @@ use url::Url;
 use crate::auth::{self, OkxApiCredentials};
 use crate::constant::{API_ROOT_URL, BTC_TICKER, USER_AGENT_NAME};
 use crate::error::Error;
-use crate::response::{Account, OkxApiErrorData, OkxApiResponse};
+use crate::response::{
+    Account, DepositTransaction, OkxApiErrorData, OkxApiResponse, Trade, WithdrawalTransaction,
+};
 use crate::util;
 
 enum Api<'a> {
     Balance { currency: Option<&'a str> },
+    DepositHistory { currency: Option<&'a str> },
+    WithdrawalHistory { currency: Option<&'a str> },
+    FillsHistory { instrument_type: Option<&'a str> },
 }
 
 impl<'a> Api<'a> {
@@ -26,12 +31,33 @@ impl<'a> Api<'a> {
                 Some(currency) => Cow::Owned(format!("/api/v5/account/balance?ccy={currency}")),
                 None => Cow::Borrowed("/api/v5/account/balance"),
             },
+            Self::DepositHistory { currency } => match currency {
+                Some(currency) => {
+                    Cow::Owned(format!("/api/v5/asset/deposit-history?ccy={currency}"))
+                }
+                None => Cow::Borrowed("/api/v5/asset/deposit-history"),
+            },
+            Self::WithdrawalHistory { currency } => match currency {
+                Some(currency) => {
+                    Cow::Owned(format!("/api/v5/asset/withdrawal-history?ccy={currency}"))
+                }
+                None => Cow::Borrowed("/api/v5/asset/withdrawal-history"),
+            },
+            Self::FillsHistory { instrument_type } => match instrument_type {
+                Some(instrument_type) => Cow::Owned(format!(
+                    "/api/v5/trade/fills-history?instType={instrument_type}"
+                )),
+                None => Cow::Borrowed("/api/v5/trade/fills-history"),
+            },
         }
     }
 
     fn http_method(&self) -> Method {
         match self {
-            Self::Balance { .. } => Method::GET,
+            Self::Balance { .. }
+            | Self::DepositHistory { .. }
+            | Self::WithdrawalHistory { .. }
+            | Self::FillsHistory { .. } => Method::GET,
         }
     }
 }
@@ -171,5 +197,38 @@ impl OkxClient {
         }
 
         Ok(total)
+    }
+
+    /// Get **bitcoin** account deposit history
+    pub async fn deposit_history(&self) -> Result<Vec<DepositTransaction>, Error> {
+        self.send_request(Api::DepositHistory {
+            currency: Some(BTC_TICKER),
+        })
+        .await
+    }
+
+    /// Get **bitcoin** account withdrawals history
+    pub async fn withdrawal_history(&self) -> Result<Vec<WithdrawalTransaction>, Error> {
+        self.send_request(Api::WithdrawalHistory {
+            currency: Some(BTC_TICKER),
+        })
+        .await
+    }
+
+    /// Get **bitcoin** spot trades.
+    pub async fn trade_history(&self) -> Result<Vec<Trade>, Error> {
+        let trades: Vec<Trade> = self
+            .send_request(Api::FillsHistory {
+                instrument_type: Some("SPOT"),
+            })
+            .await?;
+
+        // Keep only trades that involve BTC in the pair.
+        let trades: Vec<Trade> = trades
+            .into_iter()
+            .filter(|trade| trade.instrument_id.contains(BTC_TICKER))
+            .collect();
+
+        Ok(trades)
     }
 }

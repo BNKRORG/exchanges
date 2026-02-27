@@ -10,5 +10,5 @@ pub mod client;
 mod constant;
 pub mod error;
 pub mod prelude;
-mod response;
+pub mod response;
 mod util;
