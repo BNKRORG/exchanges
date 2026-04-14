@@ -3,7 +3,8 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
-use common::deser::deserialize_string_to_f64;
+use chrono::{DateTime, Utc};
+use common::deser::{deserialize_string_to_f64, deserialize_unix_timestamp_to_utc_seconds};
 use serde::Deserialize;
 
 use crate::constant::BTC_TICKER;
@@ -15,7 +16,8 @@ pub struct ExchangeInformation {
     /// Timezone
     pub timezone: String,
     /// Server time
-    pub server_time: u64,
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub server_time: DateTime<Utc>,
     /// Rate limits
     pub rate_limits: Vec<RateLimit>,
     /// Exchange symbols
@@ -169,7 +171,8 @@ pub struct Trade {
     /// Commission asset
     pub commission_asset: String,
     /// Time
-    pub time: u64,
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub time: DateTime<Utc>,
     /// Whether is buyer
     pub is_buyer: bool,
     /// Whether is maker

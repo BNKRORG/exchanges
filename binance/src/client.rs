@@ -454,6 +454,7 @@ fn next_from_id_after_batch(current_from_id: u64, batch: &[Trade]) -> Option<u64
 
 #[cfg(test)]
 mod tests {
+    use chrono::DateTime;
     use reqwest::header::{HeaderMap, HeaderValue};
 
     use super::*;
@@ -610,7 +611,7 @@ mod tests {
             quote_qty: 1.0,
             commission: 0.0,
             commission_asset: "BNB".to_string(),
-            time: 0,
+            time: DateTime::from_timestamp(0, 0).unwrap(),
             is_buyer: true,
             is_maker: false,
             is_best_match: true,

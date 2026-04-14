@@ -1,5 +1,7 @@
 //! Bitfinex responses
 
+use chrono::{DateTime, Utc};
+use common::deser::deserialize_unix_timestamp_to_utc_seconds;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
@@ -63,9 +65,9 @@ pub struct Movement {
     /// The extended name of the currency (ex. "BITCOIN")
     pub currency_name: String,
     /// Movement started at
-    pub mts_started: u64,
+    pub mts_started: DateTime<Utc>,
     /// Movement last updated at
-    pub mts_updated: u64,
+    pub mts_updated: DateTime<Utc>,
     /// Current status
     pub status: String,
     /// Amount of funds moved (positive for deposits, negative for withdrawals)
@@ -104,13 +106,13 @@ impl From<MovementArray> for Movement {
 #[allow(dead_code)]
 #[derive(Deserialize)]
 struct MovementArray(
-    u64,            // ID
-    String,         // CURRENCY
-    String,         // CURRENCY_NAME
-    Option<Value>,  // PLACEHOLDER
-    Option<Value>,  // PLACEHOLDER
-    u64,            // MTS_STARTED
-    u64,            // MTS_UPDATED
+    u64,                                                                                    // ID
+    String,        // CURRENCY
+    String,        // CURRENCY_NAME
+    Option<Value>, // PLACEHOLDER
+    Option<Value>, // PLACEHOLDER
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")] DateTime<Utc>, // MTS_STARTED
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")] DateTime<Utc>, // MTS_UPDATED
     Option<Value>,  // PLACEHOLDER
     Option<Value>,  // PLACEHOLDER
     String,         // STATUS
@@ -139,7 +141,7 @@ pub struct Trade {
     /// Symbol
     pub symbol: String,
     /// Execution timestamp
-    pub timestamp: u64,
+    pub timestamp: DateTime<Utc>,
     /// Order id
     pub order_id: u64,
     /// Positive means buy, negative means sell
@@ -181,17 +183,17 @@ impl From<TradeArray> for Trade {
 
 #[derive(Deserialize)]
 struct TradeArray(
-    u64,         // ID
-    String,      // SYMBOL
-    u64,         // MTS
-    u64,         // ORDER_ID
-    f64,         // EXEC_AMOUNT
-    f64,         // EXEC_PRICE
-    String,      // ORDER_TYPE
-    f64,         // ORDER_PRICE
-    i8,          // MAKER
-    f64,         // FEE
-    String,      // FEE_CURRENCY
+    u64,                                                                                    // ID
+    String, // SYMBOL
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")] DateTime<Utc>, // MTS
+    u64,    // ORDER_ID
+    f64,    // EXEC_AMOUNT
+    f64,    // EXEC_PRICE
+    String, // ORDER_TYPE
+    f64,    // ORDER_PRICE
+    i8,     // MAKER
+    f64,    // FEE
+    String, // FEE_CURRENCY
     Option<u64>, // CID
 );
 
@@ -274,8 +276,8 @@ mod tests {
                 id: 13293039,
                 currency: String::from("BTC"),
                 currency_name: String::from("BITCOIN"),
-                mts_started: 1574175052000,
-                mts_updated: 1574181326000,
+                mts_started: DateTime::from_timestamp(1574175052, 0).unwrap(),
+                mts_updated: DateTime::from_timestamp(1574181326, 0).unwrap(),
                 status: String::from("CANCELED"),
                 amount: -0.24,
                 fees: -0.00135,
@@ -311,7 +313,7 @@ mod tests {
             Trade {
                 id: 402088407,
                 symbol: String::from("tBTCUST"),
-                timestamp: 1574963975602,
+                timestamp: DateTime::from_timestamp(1574963975, 0).unwrap(),
                 order_id: 34938060782,
                 amount: -0.2,
                 price: 153.57,

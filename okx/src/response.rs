@@ -1,6 +1,7 @@
 //! OKX API responses
 
-use common::deser::{deserialize_string_or_number_to_u64, deserialize_string_to_f64};
+use chrono::{DateTime, Utc};
+use common::deser::{deserialize_string_to_f64, deserialize_unix_timestamp_to_utc_seconds};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -149,8 +150,8 @@ pub struct DepositTransaction {
     pub tx_id: String,
     /// Deposit timestamp.
     #[serde(rename = "ts")]
-    #[serde(deserialize_with = "deserialize_string_or_number_to_u64")]
-    pub timestamp: u64,
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub timestamp: DateTime<Utc>,
 }
 
 /// Withdrawal transaction
@@ -177,8 +178,8 @@ pub struct WithdrawalTransaction {
     pub tx_id: String,
     /// Withdrawal timestamp.
     #[serde(rename = "ts")]
-    #[serde(deserialize_with = "deserialize_string_or_number_to_u64")]
-    pub timestamp: u64,
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub timestamp: DateTime<Utc>,
 }
 
 /// Trade side.
@@ -219,10 +220,10 @@ pub struct Trade {
     /// Fee currency.
     #[serde(rename = "feeCcy")]
     pub fee_currency: String,
-    /// Unix timestamp in milliseconds.
+    /// Trade timestamp, normalized to UTC seconds.
     #[serde(rename = "ts")]
-    #[serde(deserialize_with = "deserialize_string_or_number_to_u64")]
-    pub timestamp: u64,
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub timestamp: DateTime<Utc>,
 }
 
 #[cfg(test)]
@@ -256,7 +257,7 @@ mod tests {
                 amount: 1.0,
                 state: Some(DepositStatus::DepositSuccessful),
                 tx_id: "fee235b3e812********857d36bb0426917f0df1802".to_string(),
-                timestamp: 1674038705000,
+                timestamp: DateTime::from_timestamp(1674038705, 0).unwrap(),
             }
         );
     }
@@ -294,7 +295,7 @@ mod tests {
                 fee: 0.00007,
                 state: Some(WithdrawalStatus::WithdrawalSuccessful),
                 tx_id: "35c******b360a174d".to_string(),
-                timestamp: 1655251200000,
+                timestamp: DateTime::from_timestamp(1655251200, 0).unwrap(),
             }
         );
     }
@@ -374,7 +375,7 @@ mod tests {
                 price: 51858.0,
                 fee: -0.00000192834,
                 fee_currency: "BTC".to_string(),
-                timestamp: 1708587373362,
+                timestamp: DateTime::from_timestamp(1708587373, 0).unwrap(),
             }
         )
     }

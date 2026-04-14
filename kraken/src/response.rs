@@ -2,7 +2,8 @@
 
 use std::collections::HashMap;
 
-use common::deser::deserialize_string_to_f64;
+use chrono::{DateTime, Utc};
+use common::deser::{deserialize_string_to_f64, deserialize_unix_timestamp_to_utc_seconds};
 use serde::{Deserialize, Deserializer, de};
 
 use crate::constant::TICKERS;
@@ -114,7 +115,8 @@ pub struct DepositTransaction {
     #[serde(deserialize_with = "deserialize_string_to_f64")]
     pub fee: f64,
     /// Unix timestamp when request was made
-    pub time: u64,
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub time: DateTime<Utc>,
     /// Status of deposit
     pub status: TransactionStatus,
 }
@@ -145,7 +147,8 @@ pub struct WithdrawTransaction {
     #[serde(deserialize_with = "deserialize_string_to_f64")]
     pub fee: f64,
     /// Unix timestamp when request was made
-    pub time: u64,
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub time: DateTime<Utc>,
     /// Status of withdraw
     pub status: TransactionStatus,
 }
@@ -185,7 +188,8 @@ pub struct Trade {
     /// Asset pair
     pub pair: String,
     /// Unix timestamp of trade
-    pub time: u64,
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub time: DateTime<Utc>,
     /// Type of order (buy/sell)
     #[serde(rename = "type")]
     pub r#type: TrateType,
@@ -264,6 +268,6 @@ mod tests {
         assert_eq!(tx.fee, 0.0);
         assert_eq!(tx.method, "Bitcoin Lightning");
         assert_eq!(tx.status, TransactionStatus::Success);
-        assert_eq!(tx.time, 1760031475);
+        assert_eq!(tx.time.timestamp(), 1760031475);
     }
 }
