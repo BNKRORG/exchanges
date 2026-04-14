@@ -203,6 +203,9 @@ impl BinanceClient {
 
     /// Get account information
     pub async fn get_account(&self) -> Result<AccountInformation, Error> {
+        let mut parameters = BTreeMap::new();
+        parameters.insert(String::from("omitZeroBalances"), true.to_string());
+
         // Build signed request
         let request: String = build_signed_request(BTreeMap::new(), self.recv_window)?;
 
