@@ -122,6 +122,14 @@ pub struct Balance {
     pub locked: f64,
 }
 
+impl Balance {
+    /// Calculate the total balance
+    #[inline]
+    pub fn total(&self) -> f64 {
+        self.free + self.locked
+    }
+}
+
 /// Binance trade
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
