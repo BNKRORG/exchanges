@@ -11,8 +11,12 @@ async fn main() {
     let client = BinanceClient::new(auth).unwrap();
 
     let account = client.get_account().await.unwrap();
-    println!("{:#?}", account);
 
-    let history = client.trade_history().await.unwrap();
+    println!(
+        "BTC balance: {}",
+        account.bitcoin_balance().unwrap().total()
+    );
+
+    let history = client.trade_history(&account).await.unwrap();
     println!("{:#?}", history);
 }

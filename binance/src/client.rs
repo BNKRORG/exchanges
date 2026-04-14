@@ -1,6 +1,6 @@
 //! Binance client
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::time::Duration;
 
@@ -243,19 +243,122 @@ impl BinanceClient {
             .await
     }
 
-    /// Get trades for all **bitcoin** pairs
-    pub async fn trade_history(&self) -> Result<HashMap<Symbol, Vec<Trade>>, Error> {
-        // Get all bitcoin pairs
-        let btc_pairs = self.bitcoin_pairs().await?.clone();
+    async fn trade_history_for_symbols(
+        &self,
+        symbols: Vec<Symbol>,
+    ) -> Result<HashMap<Symbol, Vec<Trade>>, Error> {
+        let mut output = HashMap::with_capacity(symbols.len());
 
-        let mut output = HashMap::with_capacity(btc_pairs.len());
-
-        for pair in btc_pairs {
+        for pair in symbols {
             let trades = self.trade_history_for_pair(pair.symbol.clone()).await?;
 
             output.insert(pair, trades);
         }
 
         Ok(output)
+    }
+
+    /// Get trades for all **bitcoin** pairs
+    pub async fn trade_history(
+        &self,
+        account: &AccountInformation,
+    ) -> Result<HashMap<Symbol, Vec<Trade>>, Error> {
+        let relevant_assets: HashSet<String> = non_btc_assets_with_balance(&account.balances);
+
+        if relevant_assets.is_empty() {
+            return Ok(HashMap::new());
+        }
+
+        let btc_pairs: &Vec<Symbol> = self.bitcoin_pairs().await?;
+        let symbols: Vec<Symbol> = filter_btc_pairs_by_assets(btc_pairs, &relevant_assets);
+
+        self.trade_history_for_symbols(symbols).await
+    }
+}
+
+fn non_btc_assets_with_balance(balances: &[Balance]) -> HashSet<String> {
+    balances
+        .iter()
+        .filter(|balance| balance.total() > 0.0 && balance.asset != BTC_TICKER)
+        .map(|balance| balance.asset.clone())
+        .collect()
+}
+
+fn filter_btc_pairs_by_assets(btc_pairs: &[Symbol], assets: &HashSet<String>) -> Vec<Symbol> {
+    btc_pairs
+        .iter()
+        .filter(|pair| {
+            (pair.base_asset == BTC_TICKER && assets.contains(&pair.quote_asset))
+                || (pair.quote_asset == BTC_TICKER && assets.contains(&pair.base_asset))
+        })
+        .cloned()
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::response::{Balance, Symbol};
+
+    fn make_symbol(symbol: &str, base: &str, quote: &str) -> Symbol {
+        Symbol {
+            symbol: symbol.to_string(),
+            status: "TRADING".to_string(),
+            base_asset: base.to_string(),
+            base_asset_precision: 8,
+            quote_asset: quote.to_string(),
+            quote_precision: 8,
+            order_types: vec!["LIMIT".to_string()],
+            iceberg_allowed: true,
+            is_spot_trading_allowed: true,
+            is_margin_trading_allowed: false,
+        }
+    }
+
+    #[test]
+    fn test_non_btc_assets_with_balance() {
+        let balances = vec![
+            Balance {
+                asset: "BTC".to_string(),
+                free: 0.2,
+                locked: 0.0,
+            },
+            Balance {
+                asset: "ETH".to_string(),
+                free: 1.1,
+                locked: 0.0,
+            },
+            Balance {
+                asset: "BNB".to_string(),
+                free: 0.0,
+                locked: 0.2,
+            },
+            Balance {
+                asset: "XRP".to_string(),
+                free: 0.0,
+                locked: 0.0,
+            },
+        ];
+
+        let assets = non_btc_assets_with_balance(&balances);
+        assert_eq!(assets.len(), 2);
+        assert!(assets.contains("ETH"));
+        assert!(assets.contains("BNB"));
+    }
+
+    #[test]
+    fn test_filter_btc_pairs_by_assets() {
+        let pairs = vec![
+            make_symbol("ETHBTC", "ETH", "BTC"),
+            make_symbol("BTCEUR", "BTC", "EUR"),
+            make_symbol("LTCBTC", "LTC", "BTC"),
+            make_symbol("ETHUSDT", "ETH", "USDT"),
+        ];
+        let assets = ["ETH".to_string(), "EUR".to_string()].into_iter().collect();
+
+        let symbols = filter_btc_pairs_by_assets(&pairs, &assets);
+        assert_eq!(symbols.len(), 2);
+        assert_eq!(symbols[0].symbol, "ETHBTC");
+        assert_eq!(symbols[1].symbol, "BTCEUR");
     }
 }
