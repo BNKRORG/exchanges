@@ -6,6 +6,8 @@ use std::hash::{Hash, Hasher};
 use common::deser::deserialize_string_to_f64;
 use serde::Deserialize;
 
+use crate::constant::BTC_TICKER;
+
 /// Exchange information
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -106,6 +108,20 @@ pub struct AccountInformation {
     pub can_deposit: bool,
     /// Balances
     pub balances: Vec<Balance>,
+}
+
+impl AccountInformation {
+    /// Get the balance for the given asset
+    #[inline]
+    pub fn balance_for_asset(&self, asset: &str) -> Option<&Balance> {
+        self.balances.iter().find(|&balance| balance.asset == asset)
+    }
+
+    /// Get the BTC balance
+    #[inline]
+    pub fn bitcoin_balance(&self) -> Option<&Balance> {
+        self.balance_for_asset(BTC_TICKER)
+    }
 }
 
 /// Balance

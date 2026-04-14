@@ -209,31 +209,6 @@ impl BinanceClient {
             .await
     }
 
-    /// Get balance for a specific asset (i.e., "BTC")
-    pub async fn balance_for_asset<S>(&self, asset: S) -> Result<Balance, Error>
-    where
-        S: AsRef<str>,
-    {
-        let account: AccountInformation = self.get_account().await?;
-
-        let asset: &str = asset.as_ref();
-
-        // Find the balance for the given asset
-        for balance in account.balances.into_iter() {
-            if balance.asset == asset {
-                return Ok(balance);
-            }
-        }
-
-        Err(Error::AssetNotFound)
-    }
-
-    /// Get **bitcoin** balance
-    #[inline]
-    pub async fn balance(&self) -> Result<Balance, Error> {
-        self.balance_for_asset(BTC_TICKER).await
-    }
-
     async fn bitcoin_pairs(&self) -> Result<&Vec<Symbol>, Error> {
         self.bitcoin_pairs
             .get_or_try_init(|| async {
