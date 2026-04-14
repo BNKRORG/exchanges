@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use binance_api::auth::BinanceAuth;
 use binance_api::client::BinanceClient;
 
@@ -17,6 +19,12 @@ async fn main() {
         account.bitcoin_balance().unwrap().total()
     );
 
-    let history = client.trade_history(&account).await.unwrap();
-    println!("{:#?}", history);
+    let mut cursor: HashMap<String, u64> = HashMap::new();
+
+    let incremental = client
+        .trade_history_bitcoin_incremental(&account, &mut cursor)
+        .await
+        .unwrap();
+    println!("New BTC trades: {:#?}", incremental);
+    println!("Cursor: {:#?}", cursor);
 }

@@ -21,6 +21,8 @@ use crate::error::Error;
 use crate::response::{AccountInformation, Balance, ExchangeInformation, Symbol, Trade};
 use crate::util::build_signed_request;
 
+const MY_TRADES_MAX_LIMIT: usize = 500;
+
 /// Binance client
 #[derive(Clone)]
 pub struct BinanceClient {
@@ -248,36 +250,117 @@ impl BinanceClient {
             .await
     }
 
-    async fn trade_history_for_symbols(
+    async fn trade_history_for_pair_with_options<S>(
         &self,
-        symbols: Vec<Symbol>,
-    ) -> Result<HashMap<Symbol, Vec<Trade>>, Error> {
-        let mut output = HashMap::with_capacity(symbols.len());
+        symbol: S,
+        from_id: u64,
+        limit: usize,
+    ) -> Result<Vec<Trade>, Error>
+    where
+        S: Into<String>,
+    {
+        let mut parameters = BTreeMap::new();
+        parameters.insert(String::from("symbol"), symbol.into());
+        parameters.insert(String::from("fromId"), from_id.to_string());
+        parameters.insert(String::from("limit"), limit.to_string());
 
-        for pair in symbols {
-            let trades = self.trade_history_for_pair(pair.symbol.clone()).await?;
+        let request: String = build_signed_request(parameters, self.recv_window)?;
+        self.get_signed(BinanceApi::Spot(Spot::MyTrades), Some(request))
+            .await
+    }
 
-            output.insert(pair, trades);
+    async fn trade_history_for_pair_from_id_paginated<S>(
+        &self,
+        symbol: S,
+        from_id: u64,
+    ) -> Result<Vec<Trade>, Error>
+    where
+        S: Into<String>,
+    {
+        let symbol: String = symbol.into();
+
+        let mut next_from_id: u64 = from_id;
+        let mut output: Vec<Trade> = Vec::new();
+
+        loop {
+            let batch: Vec<Trade> = self
+                .trade_history_for_pair_with_options(
+                    symbol.clone(),
+                    next_from_id,
+                    MY_TRADES_MAX_LIMIT,
+                )
+                .await?;
+
+            let batch_len: usize = batch.len();
+
+            if batch_len == 0 {
+                break;
+            }
+
+            let next_candidate = next_from_id_after_batch(next_from_id, &batch);
+            output.extend(batch);
+
+            if batch_len < MY_TRADES_MAX_LIMIT {
+                break;
+            }
+
+            let Some(next_from_id_candidate) = next_candidate else {
+                break;
+            };
+            next_from_id = next_from_id_candidate;
         }
 
         Ok(output)
     }
 
-    /// Get trades for all **bitcoin** pairs
-    pub async fn trade_history(
+    /// Simple incremental sync for **bitcoin pairs only**.
+    ///
+    /// The method updates `cursor` in place (`symbol -> last processed trade id`) and returns
+    /// only newly fetched trades.
+    ///
+    /// Symbol selection is:
+    /// 1. BTC symbols already present in `cursor`
+    /// 2. BTC symbols inferred from current non-zero account balances
+    ///
+    /// Trades for fully closed symbols (now at zero balance) are still synced as long as the
+    /// symbol is already present in `cursor`.
+    pub async fn trade_history_bitcoin_incremental(
         &self,
         account: &AccountInformation,
-    ) -> Result<HashMap<Symbol, Vec<Trade>>, Error> {
-        let relevant_assets: HashSet<String> = non_btc_assets_with_balance(&account.balances);
+        cursor: &mut HashMap<String, u64>,
+    ) -> Result<HashMap<String, Vec<Trade>>, Error> {
+        let btc_pairs: &Vec<Symbol> = self.bitcoin_pairs().await?;
+        let symbols_to_sync: Vec<String> = bitcoin_symbols_to_sync(btc_pairs, account, cursor);
 
-        if relevant_assets.is_empty() {
-            return Ok(HashMap::new());
+        let mut output = HashMap::with_capacity(symbols_to_sync.len());
+
+        for symbol in symbols_to_sync {
+            let from_id: u64 = cursor.get(&symbol).copied().unwrap_or(0).saturating_add(1);
+
+            let trades: Vec<Trade> = self
+                .trade_history_for_pair_from_id_paginated(symbol.clone(), from_id)
+                .await?;
+
+            if let Some(max_trade_id) = trades.iter().map(|trade| trade.id).max() {
+                cursor.insert(symbol.clone(), max_trade_id);
+            }
+
+            output.insert(symbol, trades);
         }
 
-        let btc_pairs: &Vec<Symbol> = self.bitcoin_pairs().await?;
-        let symbols: Vec<Symbol> = filter_btc_pairs_by_assets(btc_pairs, &relevant_assets);
+        Ok(output)
+    }
 
-        self.trade_history_for_symbols(symbols).await
+    /// Get trades for BTC pairs related to assets with non-zero balance.
+    ///
+    /// This is fast but can miss historical trades for assets that are now at zero balance.
+    pub async fn trade_history_bitcoin(
+        &self,
+        account: &AccountInformation,
+    ) -> Result<HashMap<String, Vec<Trade>>, Error> {
+        let mut cursor = HashMap::new();
+        self.trade_history_bitcoin_incremental(account, &mut cursor)
+            .await
     }
 }
 
@@ -333,6 +416,40 @@ fn filter_btc_pairs_by_assets(btc_pairs: &[Symbol], assets: &HashSet<String>) ->
         })
         .cloned()
         .collect()
+}
+
+fn bitcoin_symbols_to_sync(
+    btc_pairs: &[Symbol],
+    account: &AccountInformation,
+    cursor: &HashMap<String, u64>,
+) -> Vec<String> {
+    let btc_symbol_set: HashSet<String> =
+        btc_pairs.iter().map(|pair| pair.symbol.clone()).collect();
+    let relevant_assets = non_btc_assets_with_balance(&account.balances);
+    let active_symbols = filter_btc_pairs_by_assets(btc_pairs, &relevant_assets);
+
+    let mut symbols_to_sync: HashSet<String> = cursor
+        .keys()
+        .filter(|symbol| btc_symbol_set.contains(*symbol))
+        .cloned()
+        .collect();
+
+    for pair in active_symbols {
+        symbols_to_sync.insert(pair.symbol);
+    }
+
+    let mut symbols: Vec<String> = symbols_to_sync.into_iter().collect();
+    symbols.sort();
+    symbols
+}
+
+fn next_from_id_after_batch(current_from_id: u64, batch: &[Trade]) -> Option<u64> {
+    let max_id = batch.iter().map(|trade| trade.id).max()?;
+    if max_id < current_from_id {
+        return None;
+    }
+
+    Some(max_id.saturating_add(1))
 }
 
 #[cfg(test)]
@@ -397,6 +514,19 @@ mod tests {
         }
     }
 
+    fn make_account(balances: Vec<Balance>) -> AccountInformation {
+        AccountInformation {
+            maker_commission: 0.0,
+            taker_commission: 0.0,
+            buyer_commission: 0.0,
+            seller_commission: 0.0,
+            can_trade: true,
+            can_withdraw: true,
+            can_deposit: true,
+            balances,
+        }
+    }
+
     #[test]
     fn test_non_btc_assets_with_balance() {
         let balances = vec![
@@ -442,5 +572,54 @@ mod tests {
         assert_eq!(symbols.len(), 2);
         assert_eq!(symbols[0].symbol, "ETHBTC");
         assert_eq!(symbols[1].symbol, "BTCEUR");
+    }
+
+    #[test]
+    fn test_bitcoin_symbols_to_sync() {
+        let btc_pairs = vec![
+            make_symbol("ETHBTC", "ETH", "BTC"),
+            make_symbol("BTCEUR", "BTC", "EUR"),
+            make_symbol("LTCBTC", "LTC", "BTC"),
+        ];
+        let account = make_account(vec![
+            Balance {
+                asset: "BTC".to_string(),
+                free: 0.1,
+                locked: 0.0,
+            },
+            Balance {
+                asset: "ETH".to_string(),
+                free: 1.0,
+                locked: 0.0,
+            },
+        ]);
+
+        let mut cursor = HashMap::new();
+        cursor.insert("LTCBTC".to_string(), 12);
+        cursor.insert("ETHUSDT".to_string(), 45);
+
+        let symbols = bitcoin_symbols_to_sync(&btc_pairs, &account, &cursor);
+        assert_eq!(symbols, vec!["ETHBTC".to_string(), "LTCBTC".to_string()]);
+    }
+
+    fn make_trade(id: u64) -> Trade {
+        Trade {
+            id,
+            price: 1.0,
+            base_qty: 1.0,
+            quote_qty: 1.0,
+            commission: 0.0,
+            commission_asset: "BNB".to_string(),
+            time: 0,
+            is_buyer: true,
+            is_maker: false,
+            is_best_match: true,
+        }
+    }
+
+    #[test]
+    fn test_next_from_id_after_batch() {
+        let batch = vec![make_trade(100), make_trade(101), make_trade(103)];
+        assert_eq!(next_from_id_after_batch(100, &batch), Some(104));
     }
 }
