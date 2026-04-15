@@ -3,13 +3,23 @@
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use common::deser::{
     deserialize_string_to_f64, deserialize_unix_timestamp_milliseconds_to_utc_seconds,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer, de};
 
 use crate::constant::BTC_TICKER;
+
+fn deserialize_binance_datetime_utc<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    let naive =
+        NaiveDateTime::parse_from_str(&value, "%Y-%m-%d %H:%M:%S").map_err(de::Error::custom)?;
+    Ok(DateTime::from_naive_utc_and_offset(naive, Utc))
+}
 
 /// Exchange information
 #[derive(Debug, Clone, Deserialize)]
@@ -281,7 +291,8 @@ pub struct WithdrawalTransaction {
     #[serde(rename = "txId")]
     pub tx_id: String,
     /// Requested time.
-    pub apply_time: String,
+    #[serde(deserialize_with = "deserialize_binance_datetime_utc")]
+    pub apply_time: DateTime<Utc>,
     /// Network.
     pub network: String,
 }
@@ -444,7 +455,7 @@ mod tests {
         assert_eq!(tx.coin, "USDT");
         assert_eq!(tx.status, WithdrawStatus::Completed);
         assert_eq!(tx.tx_id, "0xb7...");
-        assert_eq!(tx.apply_time, "2019-10-12 11:12:02");
+        assert_eq!(tx.apply_time.timestamp(), 1570878722);
         assert_eq!(tx.network, "ETH");
     }
 
