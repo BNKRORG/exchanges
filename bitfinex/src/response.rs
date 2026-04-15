@@ -1,7 +1,7 @@
 //! Bitfinex responses
 
 use chrono::{DateTime, Utc};
-use common::deser::deserialize_unix_timestamp_to_utc_seconds;
+use common::deser::deserialize_unix_timestamp_milliseconds_to_utc_seconds;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
@@ -106,27 +106,29 @@ impl From<MovementArray> for Movement {
 #[allow(dead_code)]
 #[derive(Deserialize)]
 struct MovementArray(
-    u64,                                                                                    // ID
+    u64,           // ID
     String,        // CURRENCY
     String,        // CURRENCY_NAME
     Option<Value>, // PLACEHOLDER
     Option<Value>, // PLACEHOLDER
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")] DateTime<Utc>, // MTS_STARTED
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")] DateTime<Utc>, // MTS_UPDATED
-    Option<Value>,  // PLACEHOLDER
-    Option<Value>,  // PLACEHOLDER
-    String,         // STATUS
-    Option<Value>,  // PLACEHOLDER
-    Option<Value>,  // PLACEHOLDER
-    f64,            // AMOUNT
-    f64,            // FEES
-    Option<Value>,  // PLACEHOLDER
-    Option<Value>,  // PLACEHOLDER
-    String,         // DESTINATION_ADDRESS
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
+    DateTime<Utc>, // MTS_STARTED
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
+    DateTime<Utc>, // MTS_UPDATED
+    Option<Value>, // PLACEHOLDER
+    Option<Value>, // PLACEHOLDER
+    String,        // STATUS
+    Option<Value>, // PLACEHOLDER
+    Option<Value>, // PLACEHOLDER
+    f64,           // AMOUNT
+    f64,           // FEES
+    Option<Value>, // PLACEHOLDER
+    Option<Value>, // PLACEHOLDER
+    String,        // DESTINATION_ADDRESS
     Option<String>, // PAYMENT_ID
-    Option<Value>,  // PLACEHOLDER
-    Option<Value>,  // PLACEHOLDER
-    String,         // TRANSACTION_ID
+    Option<Value>, // PLACEHOLDER
+    Option<Value>, // PLACEHOLDER
+    String,        // TRANSACTION_ID
     Option<String>, // WITHDRAW_TRANSACTION_NOTE
 );
 
@@ -183,9 +185,10 @@ impl From<TradeArray> for Trade {
 
 #[derive(Deserialize)]
 struct TradeArray(
-    u64,                                                                                    // ID
+    u64,    // ID
     String, // SYMBOL
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")] DateTime<Utc>, // MTS
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
+    DateTime<Utc>, // MTS
     u64,    // ORDER_ID
     f64,    // EXEC_AMOUNT
     f64,    // EXEC_PRICE

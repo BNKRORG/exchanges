@@ -4,7 +4,9 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use chrono::{DateTime, Utc};
-use common::deser::{deserialize_string_to_f64, deserialize_unix_timestamp_to_utc_seconds};
+use common::deser::{
+    deserialize_string_to_f64, deserialize_unix_timestamp_milliseconds_to_utc_seconds,
+};
 use serde::Deserialize;
 
 use crate::constant::BTC_TICKER;
@@ -16,7 +18,7 @@ pub struct ExchangeInformation {
     /// Timezone
     pub timezone: String,
     /// Server time
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
     pub server_time: DateTime<Utc>,
     /// Rate limits
     pub rate_limits: Vec<RateLimit>,
@@ -169,7 +171,7 @@ pub struct DepositTransaction {
     #[serde(rename = "txId")]
     pub tx_id: String,
     /// Deposit time.
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
     pub insert_time: DateTime<Utc>,
     /// Confirmation progress.
     pub confirm_times: String,
@@ -307,7 +309,7 @@ pub struct Trade {
     /// Commission asset
     pub commission_asset: String,
     /// Time
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
     pub time: DateTime<Utc>,
     /// Whether is buyer
     pub is_buyer: bool,

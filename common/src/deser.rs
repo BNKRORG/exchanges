@@ -38,54 +38,59 @@ enum StringOrInteger {
     Unsigned(u64),
 }
 
-/// Normalize Unix timestamp to seconds.
-///
-/// Supported input units:
-/// - seconds
-/// - milliseconds
-/// - microseconds
-/// - nanoseconds
-pub fn normalize_unix_timestamp_seconds(timestamp: i64) -> i64 {
-    let abs = timestamp.unsigned_abs();
-
-    if abs >= 1_000_000_000_000_000_000 {
-        timestamp / 1_000_000_000
-    } else if abs >= 1_000_000_000_000_000 {
-        timestamp / 1_000_000
-    } else if abs >= 1_000_000_000_000 {
-        timestamp / 1_000
-    } else {
-        timestamp
+fn string_or_integer_to_i64<E: de::Error>(raw: StringOrInteger) -> Result<i64, E> {
+    match raw {
+        StringOrInteger::String(value) => value.parse::<i64>().map_err(de::Error::custom),
+        StringOrInteger::Signed(value) => Ok(value),
+        StringOrInteger::Unsigned(value) => {
+            i64::try_from(value).map_err(|_| de::Error::custom("timestamp does not fit in i64"))
+        }
     }
 }
 
-/// Convert Unix timestamp to UTC `DateTime`, normalized to seconds.
+/// Convert Unix timestamp (seconds) to UTC `DateTime`.
 ///
 /// Returns `None` if the timestamp is out of chrono range.
-pub fn unix_timestamp_to_utc_seconds(timestamp: i64) -> Option<DateTime<Utc>> {
-    let normalized = normalize_unix_timestamp_seconds(timestamp);
-    DateTime::from_timestamp(normalized, 0)
+pub fn unix_timestamp_seconds_to_utc_seconds(timestamp: i64) -> Option<DateTime<Utc>> {
+    DateTime::from_timestamp(timestamp, 0)
 }
 
-/// Deserialize Unix timestamp (`s/ms/us/ns`) into UTC `DateTime`,
-/// normalized to seconds.
-pub fn deserialize_unix_timestamp_to_utc_seconds<'de, D>(
+/// Convert Unix timestamp (milliseconds) to UTC `DateTime`, normalized to seconds.
+///
+/// Returns `None` if the timestamp is out of chrono range.
+pub fn unix_timestamp_milliseconds_to_utc_seconds(timestamp: i64) -> Option<DateTime<Utc>> {
+    DateTime::from_timestamp(timestamp / 1_000, 0)
+}
+
+fn parse_deserialized_timestamp<'de, D>(deserializer: D) -> Result<i64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = StringOrInteger::deserialize(deserializer)?;
+    string_or_integer_to_i64(raw)
+}
+
+/// Deserialize Unix timestamp (seconds) into UTC `DateTime`.
+pub fn deserialize_unix_timestamp_seconds_to_utc_seconds<'de, D>(
     deserializer: D,
 ) -> Result<DateTime<Utc>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let raw = StringOrInteger::deserialize(deserializer)?;
+    let timestamp = parse_deserialized_timestamp(deserializer)?;
+    unix_timestamp_seconds_to_utc_seconds(timestamp)
+        .ok_or_else(|| de::Error::custom("timestamp is out of range"))
+}
 
-    let timestamp = match raw {
-        StringOrInteger::String(value) => value.parse::<i64>().map_err(de::Error::custom)?,
-        StringOrInteger::Signed(value) => value,
-        StringOrInteger::Unsigned(value) => {
-            i64::try_from(value).map_err(|_| de::Error::custom("timestamp does not fit in i64"))?
-        }
-    };
-
-    unix_timestamp_to_utc_seconds(timestamp)
+/// Deserialize Unix timestamp (milliseconds) into UTC `DateTime`, normalized to seconds.
+pub fn deserialize_unix_timestamp_milliseconds_to_utc_seconds<'de, D>(
+    deserializer: D,
+) -> Result<DateTime<Utc>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let timestamp = parse_deserialized_timestamp(deserializer)?;
+    unix_timestamp_milliseconds_to_utc_seconds(timestamp)
         .ok_or_else(|| de::Error::custom("timestamp is out of range"))
 }
 
@@ -94,37 +99,37 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_normalize_unix_timestamp_seconds() {
-        assert_eq!(
-            normalize_unix_timestamp_seconds(1_700_000_000),
-            1_700_000_000
-        );
-        assert_eq!(
-            normalize_unix_timestamp_seconds(1_700_000_000_123),
-            1_700_000_000
-        );
-        assert_eq!(
-            normalize_unix_timestamp_seconds(1_700_000_000_123_456),
-            1_700_000_000
-        );
-        assert_eq!(
-            normalize_unix_timestamp_seconds(1_700_000_000_123_456_789),
-            1_700_000_000
-        );
-    }
-
-    #[test]
-    fn test_unix_timestamp_to_utc_seconds() {
-        let dt = unix_timestamp_to_utc_seconds(1_700_000_000_123).unwrap();
+    fn test_unix_timestamp_seconds_to_utc_seconds() {
+        let dt = unix_timestamp_seconds_to_utc_seconds(1_700_000_000).unwrap();
         assert_eq!(dt.timestamp(), 1_700_000_000);
         assert_eq!(dt.timestamp_subsec_nanos(), 0);
     }
 
     #[test]
-    fn test_deserialize_unix_timestamp_to_utc_seconds() {
+    fn test_unix_timestamp_milliseconds_to_utc_seconds() {
+        let dt = unix_timestamp_milliseconds_to_utc_seconds(1_700_000_000_123).unwrap();
+        assert_eq!(dt.timestamp(), 1_700_000_000);
+        assert_eq!(dt.timestamp_subsec_nanos(), 0);
+    }
+
+    #[test]
+    fn test_deserialize_unix_timestamp_seconds_to_utc_seconds() {
         #[derive(Deserialize)]
         struct Payload {
-            #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+            #[serde(deserialize_with = "deserialize_unix_timestamp_seconds_to_utc_seconds")]
+            timestamp: DateTime<Utc>,
+        }
+
+        let payload: Payload = serde_json::from_str(r#"{"timestamp":"1700000000"}"#).unwrap();
+        assert_eq!(payload.timestamp.timestamp(), 1_700_000_000);
+        assert_eq!(payload.timestamp.timestamp_subsec_nanos(), 0);
+    }
+
+    #[test]
+    fn test_deserialize_unix_timestamp_milliseconds_to_utc_seconds() {
+        #[derive(Deserialize)]
+        struct Payload {
+            #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
             timestamp: DateTime<Utc>,
         }
 

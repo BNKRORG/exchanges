@@ -1,7 +1,9 @@
 //! OKX API responses
 
 use chrono::{DateTime, Utc};
-use common::deser::{deserialize_string_to_f64, deserialize_unix_timestamp_to_utc_seconds};
+use common::deser::{
+    deserialize_string_to_f64, deserialize_unix_timestamp_milliseconds_to_utc_seconds,
+};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -150,7 +152,7 @@ pub struct DepositTransaction {
     pub tx_id: String,
     /// Deposit timestamp.
     #[serde(rename = "ts")]
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -178,7 +180,7 @@ pub struct WithdrawalTransaction {
     pub tx_id: String,
     /// Withdrawal timestamp.
     #[serde(rename = "ts")]
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
     pub timestamp: DateTime<Utc>,
 }
 
@@ -222,7 +224,7 @@ pub struct Trade {
     pub fee_currency: String,
     /// Trade timestamp, normalized to UTC seconds.
     #[serde(rename = "ts")]
-    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    #[serde(deserialize_with = "deserialize_unix_timestamp_milliseconds_to_utc_seconds")]
     pub timestamp: DateTime<Utc>,
 }
 
