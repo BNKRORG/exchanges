@@ -220,7 +220,7 @@ impl BinanceClient {
     }
 
     /// Get **bitcoin** account deposit history
-    pub async fn deposit_history(&self) -> Result<Vec<DepositTransaction>, Error> {
+    pub async fn deposit_history_bitcoin(&self) -> Result<Vec<DepositTransaction>, Error> {
         let mut parameters = BTreeMap::new();
         parameters.insert(String::from("coin"), BTC_TICKER.to_string());
 
@@ -230,7 +230,7 @@ impl BinanceClient {
     }
 
     /// Get **bitcoin** account withdrawals history
-    pub async fn withdrawal_history(&self) -> Result<Vec<WithdrawalTransaction>, Error> {
+    pub async fn withdrawal_history_bitcoin(&self) -> Result<Vec<WithdrawalTransaction>, Error> {
         let mut parameters = BTreeMap::new();
         parameters.insert(String::from("coin"), BTC_TICKER.to_string());
 

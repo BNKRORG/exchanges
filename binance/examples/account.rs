@@ -24,10 +24,10 @@ async fn main() {
         account.bitcoin_balance().unwrap().total()
     );
 
-    let deposits = client.deposit_history().await.unwrap();
+    let deposits = client.deposit_history_bitcoin().await.unwrap();
     println!("Deposits: {:?}", deposits);
 
-    let withdrawals = client.withdrawal_history().await.unwrap();
+    let withdrawals = client.withdrawal_history_bitcoin().await.unwrap();
     println!("Withdrawals: {:?}", withdrawals);
 
     let mut cursor: HashMap<String, u64> = HashMap::new();
