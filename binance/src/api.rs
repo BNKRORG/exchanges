@@ -38,7 +38,15 @@ pub(super) enum Spot {
     // AllOrderList,
     // OpenOrderList,
     Account,
+    /// Deposit hisotry
+    ///
+    /// <https://developers.binance.com/docs/wallet/capital/deposite-history>
+    DepositHistory,
     MyTrades,
+    /// Withdrawal history
+    ///
+    /// <https://developers.binance.com/docs/wallet/capital/withdraw-history>
+    WithdrawalHistory,
     // UserDataStream,
 }
 
@@ -66,14 +74,20 @@ impl Spot {
             // Self::AllOrderList => "/api/v3/allOrderList",
             // Self::OpenOrderList => "/api/v3/openOrderList",
             Self::Account => "/api/v3/account",
+            Self::DepositHistory => "/sapi/v1/capital/deposit/hisrec",
             Self::MyTrades => "/api/v3/myTrades",
+            Self::WithdrawalHistory => "/sapi/v1/capital/withdraw/history",
             // Self::UserDataStream => "/api/v3/userDataStream",
         }
     }
 
     pub(super) fn request_weight(&self) -> u32 {
         match self {
-            Self::ExchangeInfo | Self::Account | Self::MyTrades => 20,
+            Self::ExchangeInfo
+            | Self::Account
+            | Self::DepositHistory
+            | Self::MyTrades
+            | Self::WithdrawalHistory => 20,
         }
     }
 }

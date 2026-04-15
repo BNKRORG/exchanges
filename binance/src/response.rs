@@ -148,6 +148,142 @@ impl Balance {
     }
 }
 
+/// Deposit transaction
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DepositTransaction {
+    /// Deposit identifier.
+    pub id: String,
+    /// Asset.
+    pub coin: String,
+    /// Amount.
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub amount: f64,
+    /// Network.
+    pub network: String,
+    /// Deposit status.
+    pub status: DepositStatus,
+    /// Address.
+    pub address: String,
+    /// Transaction identifier.
+    #[serde(rename = "txId")]
+    pub tx_id: String,
+    /// Deposit time.
+    #[serde(deserialize_with = "deserialize_unix_timestamp_to_utc_seconds")]
+    pub insert_time: DateTime<Utc>,
+    /// Confirmation progress.
+    pub confirm_times: String,
+}
+
+/// Deposit status.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DepositStatus {
+    /// Pending.
+    Pending,
+    /// Success.
+    Success,
+    /// Rejected
+    Rejected,
+    /// Credited but cannot be withdrawn yet.
+    CreditedButCannotWithdraw,
+    /// Wrong deposit.
+    WrongDeposit,
+    /// Waiting for user confirmation.
+    WaitingUserConfirm,
+    /// Unknown status code returned by Binance.
+    Unknown(u8),
+}
+
+impl From<u8> for DepositStatus {
+    fn from(status: u8) -> Self {
+        match status {
+            0 => Self::Pending,
+            1 => Self::Success,
+            2 => Self::Rejected,
+            6 => Self::CreditedButCannotWithdraw,
+            7 => Self::WrongDeposit,
+            8 => Self::WaitingUserConfirm,
+            value => Self::Unknown(value),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for DepositStatus {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self::from(u8::deserialize(deserializer)?))
+    }
+}
+
+/// Withdrawal status
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum WithdrawStatus {
+    /// Email sent.
+    EmailSent,
+    /// Awaiting approval.
+    AwaitingApproval,
+    /// Rejected.
+    Rejected,
+    /// Processing.
+    Processing,
+    /// Completed.
+    Completed,
+    /// Unknown status code returned by Binance.
+    Unknown(u8),
+}
+
+impl From<u8> for WithdrawStatus {
+    fn from(status: u8) -> Self {
+        match status {
+            0 => Self::EmailSent,
+            2 => Self::AwaitingApproval,
+            3 => Self::Rejected,
+            4 => Self::Processing,
+            6 => Self::Completed,
+            value => Self::Unknown(value),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for WithdrawStatus {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self::from(u8::deserialize(deserializer)?))
+    }
+}
+
+/// Withdrawal transaction
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WithdrawalTransaction {
+    /// Withdrawal identifier.
+    pub id: String,
+    /// Asset.
+    pub coin: String,
+    /// Amount.
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub amount: f64,
+    /// Fee.
+    #[serde(rename = "transactionFee")]
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub transaction_fee: f64,
+    /// Withdrawal status.
+    pub status: WithdrawStatus,
+    /// Address.
+    pub address: String,
+    /// Transaction identifier.
+    #[serde(rename = "txId")]
+    pub tx_id: String,
+    /// Requested time.
+    pub apply_time: String,
+    /// Network.
+    pub network: String,
+}
+
 /// Binance trade
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -237,5 +373,94 @@ mod tests {
                 }
             ]
         );
+    }
+
+    #[test]
+    fn test_deserialize_deposit_transaction() {
+        let json = r#"{
+    "id": "769800519366885376",
+    "amount": "0.001",
+    "coin": "BTC",
+    "network": "BTC",
+    "status": 1,
+    "address": "bc1q...",
+    "txId": "0x123",
+    "insertTime": 1661493146000,
+    "confirmTimes": "1/1"
+}"#;
+
+        let tx: DepositTransaction = serde_json::from_str(json).unwrap();
+        assert_eq!(tx.id, "769800519366885376");
+        assert_eq!(tx.amount, 0.001);
+        assert_eq!(tx.coin, "BTC");
+        assert_eq!(tx.network, "BTC");
+        assert_eq!(tx.status, DepositStatus::Success);
+        assert_eq!(tx.tx_id, "0x123");
+        assert_eq!(
+            tx.insert_time,
+            DateTime::from_timestamp(1661493146, 0).unwrap()
+        );
+        assert_eq!(tx.confirm_times, "1/1");
+    }
+
+    #[test]
+    fn test_deserialize_deposit_transaction_unknown_status() {
+        let json = r#"{
+    "id": "769800519366885376",
+    "amount": "0.001",
+    "coin": "BTC",
+    "network": "BTC",
+    "status": 99,
+    "address": "bc1q...",
+    "txId": "0x123",
+    "insertTime": 1661493146000,
+    "confirmTimes": "1/1"
+}"#;
+
+        let tx: DepositTransaction = serde_json::from_str(json).unwrap();
+        assert_eq!(tx.status, DepositStatus::Unknown(99));
+    }
+
+    #[test]
+    fn test_deserialize_withdrawal_transaction() {
+        let json = r#"{
+    "id": "b6ae22b3aa844210a7041aee7589627c",
+    "amount": "8.91000000",
+    "transactionFee": "0.004",
+    "coin": "USDT",
+    "status": 6,
+    "address": "0x94df...",
+    "txId": "0xb7...",
+    "applyTime": "2019-10-12 11:12:02",
+    "network": "ETH"
+}"#;
+
+        let tx: WithdrawalTransaction = serde_json::from_str(json).unwrap();
+        assert_eq!(tx.id, "b6ae22b3aa844210a7041aee7589627c");
+        assert_eq!(tx.amount, 8.91);
+        assert_eq!(tx.transaction_fee, 0.004);
+        assert_eq!(tx.coin, "USDT");
+        assert_eq!(tx.status, WithdrawStatus::Completed);
+        assert_eq!(tx.tx_id, "0xb7...");
+        assert_eq!(tx.apply_time, "2019-10-12 11:12:02");
+        assert_eq!(tx.network, "ETH");
+    }
+
+    #[test]
+    fn test_deserialize_withdrawal_transaction_unknown_status() {
+        let json = r#"{
+    "id": "b6ae22b3aa844210a7041aee7589627c",
+    "amount": "8.91000000",
+    "transactionFee": "0.004",
+    "coin": "USDT",
+    "status": 99,
+    "address": "0x94df...",
+    "txId": "0xb7...",
+    "applyTime": "2019-10-12 11:12:02",
+    "network": "ETH"
+}"#;
+
+        let tx: WithdrawalTransaction = serde_json::from_str(json).unwrap();
+        assert_eq!(tx.status, WithdrawStatus::Unknown(99));
     }
 }

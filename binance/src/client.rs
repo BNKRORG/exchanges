@@ -18,7 +18,10 @@ use crate::auth::BinanceAuth;
 use crate::builder::BinanceClientBuilder;
 use crate::constant::{BTC_TICKER, MAX_WEIGHT_PER_MIN, USER_AGENT_NAME};
 use crate::error::Error;
-use crate::response::{AccountInformation, Balance, ExchangeInformation, Symbol, Trade};
+use crate::response::{
+    AccountInformation, Balance, DepositTransaction, ExchangeInformation, Symbol, Trade,
+    WithdrawalTransaction,
+};
 use crate::util::build_signed_request;
 
 const MY_TRADES_MAX_LIMIT: usize = 500;
@@ -213,6 +216,26 @@ impl BinanceClient {
 
         // Get signed request
         self.get_signed(BinanceApi::Spot(Spot::Account), Some(request))
+            .await
+    }
+
+    /// Get **bitcoin** account deposit history
+    pub async fn deposit_history(&self) -> Result<Vec<DepositTransaction>, Error> {
+        let mut parameters = BTreeMap::new();
+        parameters.insert(String::from("coin"), BTC_TICKER.to_string());
+
+        let request: String = build_signed_request(parameters, self.recv_window)?;
+        self.get_signed(BinanceApi::Spot(Spot::DepositHistory), Some(request))
+            .await
+    }
+
+    /// Get **bitcoin** account withdrawals history
+    pub async fn withdrawal_history(&self) -> Result<Vec<WithdrawalTransaction>, Error> {
+        let mut parameters = BTreeMap::new();
+        parameters.insert(String::from("coin"), BTC_TICKER.to_string());
+
+        let request: String = build_signed_request(parameters, self.recv_window)?;
+        self.get_signed(BinanceApi::Spot(Spot::WithdrawalHistory), Some(request))
             .await
     }
 
