@@ -38,6 +38,10 @@ pub(super) enum Spot {
     // AllOrderList,
     // OpenOrderList,
     Account,
+    /// Deposit address
+    ///
+    /// <https://developers.binance.com/docs/wallet/capital/deposite-address>
+    DepositAddress,
     /// Deposit hisotry
     ///
     /// <https://developers.binance.com/docs/wallet/capital/deposite-history>
@@ -74,6 +78,7 @@ impl Spot {
             // Self::AllOrderList => "/api/v3/allOrderList",
             // Self::OpenOrderList => "/api/v3/openOrderList",
             Self::Account => "/api/v3/account",
+            Self::DepositAddress => "/sapi/v1/capital/deposit/address",
             Self::DepositHistory => "/sapi/v1/capital/deposit/hisrec",
             Self::MyTrades => "/api/v3/myTrades",
             Self::WithdrawalHistory => "/sapi/v1/capital/withdraw/history",
@@ -88,6 +93,7 @@ impl Spot {
             | Self::DepositHistory
             | Self::MyTrades
             | Self::WithdrawalHistory => 20,
+            Self::DepositAddress => 10,
         }
     }
 }

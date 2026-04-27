@@ -27,4 +27,7 @@ pub enum Error {
     /// Can't clone the request
     #[error("can't clone the request")]
     CantCloneRequest,
+    /// Missing deposit address in response
+    #[error("missing deposit address")]
+    MissingDepositAddress,
 }

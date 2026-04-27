@@ -38,4 +38,7 @@ async fn main() {
         .unwrap();
     println!("Trades: {:#?}", incremental);
     println!("Cursor: {:#?}", cursor);
+
+    let address = client.bitcoin_deposit_address().await.unwrap();
+    println!("BTC deposit address: {address}");
 }

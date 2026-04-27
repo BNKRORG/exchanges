@@ -187,6 +187,20 @@ pub struct DepositTransaction {
     pub confirm_times: String,
 }
 
+/// Deposit address.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DepositAddress {
+    /// Address.
+    pub address: String,
+    /// Asset.
+    pub coin: String,
+    /// Address tag.
+    pub tag: String,
+    /// Explorer URL.
+    pub url: String,
+}
+
 /// Deposit status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DepositStatus {
@@ -432,6 +446,25 @@ mod tests {
 
         let tx: DepositTransaction = serde_json::from_str(json).unwrap();
         assert_eq!(tx.status, DepositStatus::Unknown(99));
+    }
+
+    #[test]
+    fn test_deserialize_deposit_address() {
+        let json = r#"{
+    "address": "1HPn8Rx2y6nNSfagQBKy27GB99Vbzg89wv",
+    "coin": "BTC",
+    "tag": "",
+    "url": "https://btc.com/1HPn8Rx2y6nNSfagQBKy27GB99Vbzg89wv"
+}"#;
+
+        let address: DepositAddress = serde_json::from_str(json).unwrap();
+        assert_eq!(address.address, "1HPn8Rx2y6nNSfagQBKy27GB99Vbzg89wv");
+        assert_eq!(address.coin, "BTC");
+        assert_eq!(address.tag, "");
+        assert_eq!(
+            address.url,
+            "https://btc.com/1HPn8Rx2y6nNSfagQBKy27GB99Vbzg89wv"
+        );
     }
 
     #[test]

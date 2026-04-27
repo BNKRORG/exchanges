@@ -19,8 +19,8 @@ use crate::builder::BinanceClientBuilder;
 use crate::constant::{BTC_TICKER, MAX_WEIGHT_PER_MIN, USER_AGENT_NAME};
 use crate::error::Error;
 use crate::response::{
-    AccountInformation, Balance, DepositTransaction, ExchangeInformation, Symbol, Trade,
-    WithdrawalTransaction,
+    AccountInformation, Balance, DepositAddress, DepositTransaction, ExchangeInformation, Symbol,
+    Trade, WithdrawalTransaction,
 };
 use crate::util::build_signed_request;
 
@@ -217,6 +217,24 @@ impl BinanceClient {
         // Get signed request
         self.get_signed(BinanceApi::Spot(Spot::Account), Some(request))
             .await
+    }
+
+    /// Get a **bitcoin** deposit address.
+    pub async fn bitcoin_deposit_address(&self) -> Result<String, Error> {
+        let mut parameters = BTreeMap::new();
+        parameters.insert(String::from("coin"), BTC_TICKER.to_string());
+        parameters.insert(String::from("network"), BTC_TICKER.to_string());
+
+        let request: String = build_signed_request(parameters, self.recv_window)?;
+        let address: DepositAddress = self
+            .get_signed(BinanceApi::Spot(Spot::DepositAddress), Some(request))
+            .await?;
+
+        if address.address.is_empty() {
+            return Err(Error::MissingDepositAddress);
+        }
+
+        Ok(address.address)
     }
 
     /// Get **bitcoin** account deposit history
