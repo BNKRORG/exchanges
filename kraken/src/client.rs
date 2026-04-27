@@ -11,14 +11,22 @@ use crate::auth::{self, KrakenAuth};
 use crate::constant::{API_ROOT_URL, API_VERSION, USER_AGENT_NAME, XBT_TICKER};
 use crate::error::Error;
 use crate::request::{
-    DepositStatus, Empty, GetTradesHistory, KrakenRequestBody, Request, WithdrawStatus,
+    DepositAddresses, DepositStatus, Empty, GetTradesHistory, KrakenRequestBody, Request,
+    WithdrawStatus,
 };
 use crate::response::{
-    BitcoinBalances, DepositTransaction, KrakenResult, Trade, TradesHistory, WithdrawTransaction,
+    BitcoinBalances, DepositAddress, DepositTransaction, KrakenResult, Trade, TradesHistory,
+    WithdrawTransaction,
 };
 
 enum Api<'a> {
     Balance,
+    DepositAddresses {
+        asset: &'a str,
+        method: &'a str,
+        new: Option<bool>,
+        amount: Option<f64>,
+    },
     DepositStatus {
         /// Currency to get transactions for.
         asset: Option<&'a str>,
@@ -37,6 +45,7 @@ impl Api<'_> {
     fn method(&self) -> &str {
         match self {
             Self::Balance => "Balance",
+            Self::DepositAddresses { .. } => "DepositAddresses",
             Self::DepositStatus { .. } => "DepositStatus",
             Self::WithdrawStatus { .. } => "WithdrawStatus",
             Self::TradesHistory { .. } => "TradesHistory",
@@ -46,6 +55,17 @@ impl Api<'_> {
     fn body(&self) -> Request {
         match self {
             Self::Balance => Request::Empty(Empty {}),
+            Self::DepositAddresses {
+                asset,
+                method,
+                new,
+                amount,
+            } => Request::DepositAddresses(DepositAddresses {
+                asset,
+                method,
+                new: *new,
+                amount: *amount,
+            }),
             Self::DepositStatus { asset } => Request::DepositStatus(DepositStatus {
                 asset: asset.as_deref(),
             }),
@@ -150,6 +170,20 @@ impl KrakenClient {
 
         // Sum balances
         Ok(balances.sum())
+    }
+
+    /// Get a **bitcoin** deposit address.
+    pub async fn bitcoin_deposit_address(&self) -> Result<String, Error> {
+        let mut addresses: Vec<DepositAddress> = self
+            .query_private(Api::DepositAddresses {
+                asset: XBT_TICKER,
+                method: "Bitcoin",
+                new: Some(true),
+                amount: None,
+            })
+            .await?;
+
+        Ok(addresses.pop().ok_or(Error::MissingDepositAddress)?.address)
     }
 
     /// Get **bitcoin** deposit transactions.

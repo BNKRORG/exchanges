@@ -15,9 +15,20 @@ pub(crate) struct KrakenRequestBody<'a> {
 #[serde(untagged)]
 pub(crate) enum Request<'a> {
     Empty(Empty),
+    DepositAddresses(DepositAddresses<'a>),
     DepositStatus(DepositStatus<'a>),
     WithdrawStatus(WithdrawStatus<'a>),
     TradesHistory(GetTradesHistory<'a>),
+}
+
+#[derive(Debug, Serialize)]
+pub(crate) struct DepositAddresses<'a> {
+    pub(crate) asset: &'a str,
+    pub(crate) method: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) new: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) amount: Option<f64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -67,5 +78,23 @@ mod tests {
         };
         let json = serde_json::to_string(&status).unwrap();
         assert_eq!(json, r#"{"nonce":1234567890,"asset":"XBT"}"#);
+    }
+
+    #[test]
+    fn test_deposit_addresses_serialize() {
+        let status = KrakenRequestBody {
+            nonce: 1234567890,
+            request: Request::DepositAddresses(DepositAddresses {
+                asset: "XBT",
+                method: "Bitcoin",
+                new: Some(true),
+                amount: Some(0.001),
+            }),
+        };
+        let json = serde_json::to_string(&status).unwrap();
+        assert_eq!(
+            json,
+            r#"{"nonce":1234567890,"asset":"XBT","method":"Bitcoin","new":true,"amount":0.001}"#
+        );
     }
 }

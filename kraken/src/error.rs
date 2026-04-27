@@ -30,4 +30,7 @@ pub enum Error {
     /// Missing result in response
     #[error("missing result")]
     MissingResult,
+    /// Missing deposit address in response
+    #[error("missing deposit address")]
+    MissingDepositAddress,
 }

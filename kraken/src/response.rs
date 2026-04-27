@@ -121,6 +121,14 @@ pub struct DepositTransaction {
     pub status: TransactionStatus,
 }
 
+#[derive(Debug, Deserialize)]
+pub(crate) struct DepositAddress {
+    pub(crate) address: String,
+    // pub(crate) expiretm: String,
+    // #[serde(default)]
+    // pub(crate) new: bool,
+}
+
 /// Withdraw transaction
 #[derive(Debug, Deserialize)]
 pub struct WithdrawTransaction {
@@ -269,5 +277,14 @@ mod tests {
         assert_eq!(tx.method, "Bitcoin Lightning");
         assert_eq!(tx.status, TransactionStatus::Success);
         assert_eq!(tx.time.timestamp(), 1760031475);
+    }
+
+    #[test]
+    fn test_deposit_address_deserialization() {
+        let json = r#"{"address":"32iVBEu4dxkUQk9dJbZUiBiQdmypcEyJRf","expiretm":"0","new":true}"#;
+
+        let address: DepositAddress = serde_json::from_str(json).expect("Failed to deserialize");
+        assert_eq!(address.address, "32iVBEu4dxkUQk9dJbZUiBiQdmypcEyJRf");
+        //assert!(address.new);
     }
 }
