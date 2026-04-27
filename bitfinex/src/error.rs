@@ -18,4 +18,10 @@ pub enum Error {
     /// HMAC invalid length error
     #[error(transparent)]
     HmacInvalidKeyLength(#[from] hmac::digest::InvalidLength),
+    /// Json error
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+    /// Missing deposit address in response
+    #[error("missing deposit address")]
+    MissingDepositAddress,
 }

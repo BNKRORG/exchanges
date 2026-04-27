@@ -5,6 +5,12 @@ use common::deser::deserialize_unix_timestamp_milliseconds_to_utc_seconds;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
+/// Bitfinex deposit address.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub(crate) struct DepositAddress {
+    pub(crate) address: String,
+}
+
 /// Bitfinex wallet
 ///
 /// <https://docs.bitfinex.com/reference/rest-auth-wallets>
@@ -205,6 +211,19 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+
+    #[test]
+    fn test_deposit_address_deserialization() {
+        let json = r#"{
+            "result": "success",
+            "method": "bitcoin",
+            "currency": "BTC",
+            "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+        }"#;
+
+        let address: DepositAddress = serde_json::from_str(json).unwrap();
+        assert_eq!(address.address, "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa");
+    }
 
     #[test]
     fn test_wallet_deserialization() {

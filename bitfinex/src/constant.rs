@@ -1,5 +1,5 @@
 pub(crate) const API_ROOT_URL: &str = "https://api.bitfinex.com/";
-pub(crate) const API_SIGNATURE_PATH: &str = "/api/v2/auth/r/";
+pub(crate) const API_SIGNATURE_PATH_PREFIX: &str = "/api";
 
 /// User Agent for the client
 pub(super) const USER_AGENT_NAME: &str =
