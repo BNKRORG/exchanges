@@ -75,6 +75,23 @@ pub struct Account {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
+/// On-chain address.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Address {
+    /// Address ID.
+    pub id: String,
+    /// Address string.
+    pub address: String,
+    /// User-defined label.
+    pub name: Option<String>,
+    /// Blockchain network.
+    pub network: String,
+    /// Created at.
+    pub created_at: DateTime<Utc>,
+    /// Updated at.
+    pub updated_at: DateTime<Utc>,
+}
+
 /// Account balance
 #[derive(Debug, Clone, PartialEq, PartialOrd, Deserialize)]
 pub struct Balance {
@@ -442,5 +459,31 @@ mod tests {
         assert_eq!(tx3.status, TransactionStatus::Completed);
         assert_eq!(tx3.amount.amount, -5.0);
         assert_eq!(tx3.native_amount.amount, -50.0);
+    }
+
+    #[test]
+    fn test_deserialize_address() {
+        let json = r##"
+        {
+          "data": {
+            "id": "dd3183eb-af1d-5f5d-a90d-cbff946435ff",
+            "address": "mswUGcPHp1YnkLCgF1TtoryqSc5E9Q8xFa",
+            "name": null,
+            "created_at": "2015-01-31T20:49:02Z",
+            "updated_at": "2015-03-31T17:25:29-07:00",
+            "network": "bitcoin",
+            "resource": "address",
+            "resource_path": "/v2/accounts/2bbf394c-193b-5b2a-9155-3b4732659ede/addresses/dd3183eb-af1d-5f5d-a90d-cbff946435ff"
+          }
+        }"##;
+
+        let response: CoinbaseResponse<Address> = serde_json::from_str(json).unwrap();
+        let address = response.data;
+
+        assert_eq!(address.id, "dd3183eb-af1d-5f5d-a90d-cbff946435ff");
+        assert_eq!(address.address, "mswUGcPHp1YnkLCgF1TtoryqSc5E9Q8xFa");
+        assert_eq!(address.name, None);
+        assert_eq!(address.network, "bitcoin");
+        assert_eq!(address.created_at.timestamp(), 1422737342);
     }
 }

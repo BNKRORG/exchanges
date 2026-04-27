@@ -28,4 +28,10 @@ pub enum Error {
     /// Host not found
     #[error("host not found")]
     HostNotFound,
+    /// Bitcoin wallet account not found
+    #[error("bitcoin wallet account not found")]
+    BitcoinWalletAccountNotFound,
+    /// Missing deposit address in response
+    #[error("missing deposit address")]
+    MissingDepositAddress,
 }

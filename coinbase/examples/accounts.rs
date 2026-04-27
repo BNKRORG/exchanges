@@ -13,4 +13,7 @@ async fn main() {
     for account in accounts {
         println!("{:#?}", account);
     }
+
+    let address = client.bitcoin_deposit_address().await.unwrap();
+    println!("BTC deposit address: {address}");
 }

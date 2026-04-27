@@ -1,12 +1,22 @@
 //! Coinbase App client
 
 use reqwest::Response;
+use serde::Serialize;
 
 use super::agent::SecureHttpClientAgent;
 use super::auth::CoinbaseAuth;
 use super::error::Error;
-use super::response::{Account, CoinbaseResponse, Transaction};
+use super::response::{Account, Address, CoinbaseResponse, Transaction};
 use crate::app::builder::CoinbaseAppClientBuilder;
+
+const BITCOIN_NETWORK: &str = "bitcoin";
+const BTC_CURRENCY_CODE: &str = "BTC";
+const WALLET_ACCOUNT_TYPE: &str = "wallet";
+
+#[derive(Debug, Serialize)]
+struct CreateAddressRequest<'a> {
+    network: &'a str,
+}
 
 /// Coinbase App client
 #[derive(Debug, Clone)]
@@ -77,6 +87,29 @@ impl CoinbaseAppClient {
         Ok(res.data)
     }
 
+    /// Create a new **bitcoin** deposit address.
+    ///
+    /// <https://docs.cdp.coinbase.com/coinbase-app/transfer-apis/onchain-addresses#create-address>
+    pub async fn bitcoin_deposit_address(&self) -> Result<String, Error> {
+        let accounts: Vec<Account> = self.accounts().await?;
+        let account_id: &str =
+            find_bitcoin_wallet_account_id(&accounts).ok_or(Error::BitcoinWalletAccountNotFound)?;
+
+        let endpoint: String = format!("/v2/accounts/{account_id}/addresses");
+        let body: String = serde_json::to_string(&CreateAddressRequest {
+            network: BITCOIN_NETWORK,
+        })?;
+
+        let res: Response = self.client.post(&endpoint, Some(body)).await?;
+        let res: CoinbaseResponse<Address> = res.json().await?;
+
+        if res.data.address.is_empty() {
+            return Err(Error::MissingDepositAddress);
+        }
+
+        Ok(res.data.address)
+    }
+
     /// Get transactions by account ID
     ///
     /// <https://docs.cdp.coinbase.com/coinbase-app/track-apis/transactions#list-transactions>
@@ -107,5 +140,64 @@ impl CoinbaseAppClient {
         }
 
         Ok(transactions)
+    }
+}
+
+fn find_bitcoin_wallet_account_id(accounts: &[Account]) -> Option<&str> {
+    accounts
+        .iter()
+        .find(|account| {
+            account.currency.code == BTC_CURRENCY_CODE && account.r#type == WALLET_ACCOUNT_TYPE
+        })
+        .map(|account| account.id.as_str())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::response::{Balance, Currency};
+
+    fn make_account(id: &str, account_type: &str, currency_code: &str) -> Account {
+        Account {
+            id: id.to_string(),
+            name: "test".to_string(),
+            primary: false,
+            r#type: account_type.to_string(),
+            currency: Currency {
+                asset_id: "asset".to_string(),
+                code: currency_code.to_string(),
+                name: currency_code.to_string(),
+            },
+            balance: Balance {
+                amount: 0.0,
+                currency: currency_code.to_string(),
+            },
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    #[test]
+    fn test_find_bitcoin_wallet_account_id() {
+        let accounts = vec![
+            make_account("fiat-btc", "fiat", "BTC"),
+            make_account("eth-wallet", "wallet", "ETH"),
+            make_account("btc-wallet", "wallet", "BTC"),
+        ];
+
+        assert_eq!(
+            find_bitcoin_wallet_account_id(&accounts),
+            Some("btc-wallet")
+        );
+    }
+
+    #[test]
+    fn test_find_bitcoin_wallet_account_id_missing() {
+        let accounts = vec![
+            make_account("fiat-btc", "fiat", "BTC"),
+            make_account("eth-wallet", "wallet", "ETH"),
+        ];
+
+        assert_eq!(find_bitcoin_wallet_account_id(&accounts), None);
     }
 }

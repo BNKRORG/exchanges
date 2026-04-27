@@ -142,4 +142,21 @@ impl SecureHttpClientAgent {
         // Execute request
         self.base.execute_request(METHOD, url, None, token).await
     }
+
+    pub(super) async fn post(
+        &self,
+        resource: &str,
+        body: Option<String>,
+    ) -> Result<Response, Error> {
+        const METHOD: Method = Method::POST;
+
+        // Build URL
+        let url: Url = self.base.build_url(resource, None)?;
+
+        // Build token
+        let token: Option<String> = self.build_token(&METHOD, resource)?;
+
+        // Execute request
+        self.base.execute_request(METHOD, url, body, token).await
+    }
 }
