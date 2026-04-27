@@ -11,9 +11,9 @@ chrono = { workspace = true, features = ["serde"] }
 common.workspace = true
 reqwest = { workspace = true, features = ["http2", "json", "rustls-tls"] }
 serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
 thiserror.workspace = true
 url.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

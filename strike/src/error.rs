@@ -15,4 +15,10 @@ pub enum Error {
     /// Url error
     #[error(transparent)]
     Url(#[from] url::ParseError),
+    /// Json error
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+    /// Missing deposit address in response
+    #[error("missing deposit address")]
+    MissingDepositAddress,
 }

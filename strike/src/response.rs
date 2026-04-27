@@ -56,6 +56,28 @@ pub struct StrikeAmount {
     pub currency: String,
 }
 
+/// On-chain receive request.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnchainReceiveRequest {
+    /// Address to be paid to.
+    pub address: String,
+    /// Address URI to be paid to.
+    pub address_uri: String,
+}
+
+/// Receive request.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReceiveRequest {
+    /// Receive request ID.
+    pub receive_request_id: String,
+    /// Time of receive request creation.
+    pub created: DateTime<Utc>,
+    /// On-chain receive request.
+    pub onchain: Option<OnchainReceiveRequest>,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Deposits {
@@ -157,5 +179,33 @@ mod tests {
         assert_eq!(invoice.amount.currency, "USD");
         assert_eq!(invoice.state, InvoiceState::Unpaid);
         assert_eq!(invoice.created.timestamp(), 1636747725);
+    }
+
+    #[test]
+    fn test_deserialize_receive_request() {
+        let json = r#"{
+  "receiveRequestId": "6b91e56d-fce9-4eec-995f-1d08fe6ba380",
+  "created": "2024-10-14T10:24:47.0326505+00:00",
+  "targetCurrency": "BTC",
+  "onchain": {
+    "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    "addressUri": "bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
+  }
+}"#;
+
+        let request: ReceiveRequest = serde_json::from_str(json).unwrap();
+
+        assert_eq!(
+            request.receive_request_id,
+            "6b91e56d-fce9-4eec-995f-1d08fe6ba380"
+        );
+        assert_eq!(request.created.timestamp(), 1728901487);
+        assert_eq!(
+            request.onchain,
+            Some(OnchainReceiveRequest {
+                address: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh".to_string(),
+                address_uri: "bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh".to_string(),
+            })
+        );
     }
 }
