@@ -34,4 +34,7 @@ pub enum Error {
         /// Error message details
         smg: String,
     },
+    /// Missing deposit address in response
+    #[error("missing deposit address")]
+    MissingDepositAddress,
 }

@@ -39,6 +39,21 @@ pub(crate) struct CurrencyDetail {
     pub amount: f64,
 }
 
+/// Deposit address.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct DepositAddress {
+    /// Chain name.
+    pub chain: String,
+    /// Currency.
+    #[serde(rename = "ccy")]
+    pub currency: String,
+    /// Deposit address.
+    #[serde(rename = "addr")]
+    pub address: String,
+    /// Whether this address is selected by default.
+    pub selected: bool,
+}
+
 /// Status of deposit
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum DepositStatus {
@@ -331,6 +346,31 @@ mod tests {
 
         let tx: WithdrawalTransaction = serde_json::from_str(json).unwrap();
         assert_eq!(tx.state, None);
+    }
+
+    #[test]
+    fn test_deserialize_deposit_address() {
+        let json = r#"{
+        "chain": "BTC-Bitcoin",
+        "ctAddr": "",
+        "ccy": "BTC",
+        "to": "6",
+        "addr": "39XNxK1Ryqgg3Bsyn6HzoqV4Xji25pNkv6",
+        "verifiedName":"John Corner",
+        "selected": true
+    }"#;
+
+        let address: DepositAddress = serde_json::from_str(json).unwrap();
+
+        assert_eq!(
+            address,
+            DepositAddress {
+                chain: "BTC-Bitcoin".to_string(),
+                currency: "BTC".to_string(),
+                address: "39XNxK1Ryqgg3Bsyn6HzoqV4Xji25pNkv6".to_string(),
+                selected: true,
+            }
+        );
     }
 
     #[test]

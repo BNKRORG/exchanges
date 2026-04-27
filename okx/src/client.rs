@@ -13,12 +13,16 @@ use crate::auth::{self, OkxApiCredentials};
 use crate::constant::{API_ROOT_URL, BTC_TICKER, USER_AGENT_NAME};
 use crate::error::Error;
 use crate::response::{
-    Account, DepositTransaction, OkxApiErrorData, OkxApiResponse, Trade, WithdrawalTransaction,
+    Account, DepositAddress, DepositTransaction, OkxApiErrorData, OkxApiResponse, Trade,
+    WithdrawalTransaction,
 };
 use crate::util;
 
+const BTC_NATIVE_CHAIN: &str = "BTC-Bitcoin";
+
 enum Api<'a> {
     Balance { currency: Option<&'a str> },
+    DepositAddress { currency: &'a str },
     DepositHistory { currency: Option<&'a str> },
     WithdrawalHistory { currency: Option<&'a str> },
     FillsHistory { instrument_type: Option<&'a str> },
@@ -31,6 +35,9 @@ impl<'a> Api<'a> {
                 Some(currency) => Cow::Owned(format!("/api/v5/account/balance?ccy={currency}")),
                 None => Cow::Borrowed("/api/v5/account/balance"),
             },
+            Self::DepositAddress { currency } => {
+                Cow::Owned(format!("/api/v5/asset/deposit-address?ccy={currency}"))
+            }
             Self::DepositHistory { currency } => match currency {
                 Some(currency) => {
                     Cow::Owned(format!("/api/v5/asset/deposit-history?ccy={currency}"))
@@ -55,6 +62,7 @@ impl<'a> Api<'a> {
     fn http_method(&self) -> Method {
         match self {
             Self::Balance { .. }
+            | Self::DepositAddress { .. }
             | Self::DepositHistory { .. }
             | Self::WithdrawalHistory { .. }
             | Self::FillsHistory { .. } => Method::GET,
@@ -197,6 +205,22 @@ impl OkxClient {
         }
 
         Ok(total)
+    }
+
+    /// Get a **bitcoin** deposit address.
+    pub async fn bitcoin_deposit_address(&self) -> Result<String, Error> {
+        let addresses: Vec<DepositAddress> = self
+            .send_request(Api::DepositAddress {
+                currency: BTC_TICKER,
+            })
+            .await?;
+
+        let address: DepositAddress = addresses
+            .into_iter()
+            .find(|address| address.chain == BTC_NATIVE_CHAIN && !address.address.is_empty())
+            .ok_or(Error::MissingDepositAddress)?;
+
+        Ok(address.address)
     }
 
     /// Get **bitcoin** account deposit history
